@@ -27,20 +27,27 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str = Field(..., min_length=8)
-    confirm_password: str = Field(..., min_length=8)
+    confirm_password: str = Field(None, min_length=8)
     
     @validator('confirm_password')
     def passwords_match(cls, v, values):
-        if 'new_password' in values and v != values['new_password']:
+        if v is not None and 'new_password' in values and v != values['new_password']:
             raise ValueError('Passwords do not match')
         return v
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    username: str  # email address
+    full_name: str
 
 class MessageResponse(BaseModel):
     message: str
+
+class SignupResponse(BaseModel):
+    message: str
+    username: str  # email address
+    full_name: str
 
 class UserProfile(BaseModel):
     id: int

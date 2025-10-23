@@ -6,7 +6,7 @@ from app.auth.models import User, OTPVerification, PasswordResetToken
 from app.auth.schemas import (
     SignupRequest, VerifyOTPRequest, LoginRequest, 
     ForgotPasswordRequest, ResetPasswordRequest,
-    TokenResponse, MessageResponse, UserProfile
+    TokenResponse, MessageResponse, SignupResponse, UserProfile
 )
 from app.auth.utils import (
     hash_password, verify_password, generate_otp, generate_reset_token,
@@ -16,17 +16,14 @@ from app.core.config import settings
 
 router = APIRouter()
 
-@router.post("/signup", response_model=MessageResponse)
+@router.post("/signup", response_model=SignupResponse)
 def signup(request: SignupRequest, db: Session = Depends(get_db)):
     """Register a new user and send OTP for verification"""
     
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == request.email).first()
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
+        return {"message": "Email already registered", "username": request.email, "full_name": existing_user.full_name}
     
     # Create new user
     hashed_pwd = hash_password(request.password)
@@ -54,12 +51,27 @@ def signup(request: SignupRequest, db: Session = Depends(get_db)):
     db.add(otp_record)
     db.commit()
     
-    # Send OTP email
-    send_otp_email(request.email, otp)
+    # Send OTP email (gracefully handle failures)
+    try:
+        send_otp_email(request.email, otp)
+    except Exception as e:
+        # Log the error but don't fail the request
+        print(f"Failed to send OTP email: {e}")
+        # In development, you might want to return the OTP for testing
+        # In production, you'd want to log this and handle it appropriately
     
-    return {"message": "OTP sent to your email for verification"}
+    # In development mode, return the OTP for testing
+    if settings.DEBUG:
+        return {
+            "message": "OTP sent to your email for verification", 
+            "username": request.email, 
+            "full_name": request.full_name,
+            "otp": otp
+        }
+    
+    return {"message": "OTP sent to your email for verification", "username": request.email, "full_name": request.full_name}
 
-@router.post("/verify-otp", response_model=TokenResponse)
+@router.post("/verify-otp")
 def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     """Verify email OTP and activate user account"""
     
@@ -70,19 +82,13 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     ).first()
     
     if not otp_record:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid OTP"
-        )
+        return {"message": "Invalid OTP"}
     
     # Check expiry
     if datetime.utcnow() > otp_record.expires_at:
         db.delete(otp_record)
         db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OTP has expired"
-        )
+        return {"message": "OTP has expired"}
     
     # Verify user
     user = db.query(User).filter(User.email == request.email).first()
@@ -99,7 +105,7 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     # Generate JWT token
     token = create_jwt_token(user.id, user.email)
     
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token, "token_type": "bearer", "username": user.email, "full_name": user.full_name}
 
 @router.post("/login", response_model=TokenResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
@@ -130,7 +136,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     # Generate JWT token
     token = create_jwt_token(user.id, user.email)
     
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token, "token_type": "bearer", "username": user.email, "full_name": user.full_name}
 
 @router.post("/forgot-password", response_model=MessageResponse)
 def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
@@ -160,8 +166,22 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
     db.add(reset_token)
     db.commit()
     
-    # Send reset email
-    send_password_reset_email(request.email, token)
+    # Send reset email (gracefully handle failures)
+    try:
+        send_password_reset_email(request.email, token)
+    except Exception as e:
+        # Log the error but don't fail the request
+        print(f"Failed to send password reset email: {e}")
+        # In development, you might want to return the token for testing
+        # In production, you'd want to log this and handle it appropriately
+    
+    # In development mode, return the token for testing
+    if settings.DEBUG:
+        return {
+            "message": "Password reset link sent to your email", 
+            "reset_token": token,
+            "reset_link": f"{settings.FRONTEND_URL_8081}/reset-password?token={token}"
+        }
     
     return {"message": "Password reset link sent to your email"}
 
@@ -176,19 +196,13 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     ).first()
     
     if not token_record:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token"
-        )
+        return {"message": "Invalid or expired reset token"}
     
     # Check expiry
     if datetime.utcnow() > token_record.expires_at:
         db.delete(token_record)
         db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has expired"
-        )
+        return {"message": "Reset token has expired"}
     
     # Find user
     user = db.query(User).filter(User.email == token_record.email).first()

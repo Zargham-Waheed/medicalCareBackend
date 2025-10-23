@@ -18,10 +18,14 @@ class Settings(BaseSettings):
     
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL_8081: str = "http://localhost:8081"
     
     # OTP Configuration
     OTP_EXPIRY_MINUTES: int = 10
     RESET_TOKEN_EXPIRY_MINUTES: int = 15
+    
+    # Development
+    DEBUG: bool = True
     
     class Config:
         env_file = ".env"
