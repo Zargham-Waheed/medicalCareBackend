@@ -3,7 +3,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "sqlite:///./app.db"
+    DATABASE_URL: str = "postgresql://username:password@localhost:5432/medicalcare_db"
     
     # JWT
     JWT_SECRET_KEY: str

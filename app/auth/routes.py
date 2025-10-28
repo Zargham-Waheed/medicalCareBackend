@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from app.db.database import get_db
@@ -38,7 +38,7 @@ def signup(request: SignupRequest, db: Session = Depends(get_db)):
     
     # Generate and store OTP
     otp = generate_otp()
-    expiry = datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
+    expiry = datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
     
     # Delete any existing OTPs for this email
     db.query(OTPVerification).filter(OTPVerification.email == request.email).delete()
@@ -85,7 +85,7 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
         return {"message": "Invalid OTP"}
     
     # Check expiry
-    if datetime.utcnow() > otp_record.expires_at:
+    if datetime.now(timezone.utc) > otp_record.expires_at:
         db.delete(otp_record)
         db.commit()
         return {"message": "OTP has expired"}
@@ -150,7 +150,7 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
     
     # Generate reset token
     token = generate_reset_token()
-    expiry = datetime.utcnow() + timedelta(minutes=settings.RESET_TOKEN_EXPIRY_MINUTES)
+    expiry = datetime.now(timezone.utc) + timedelta(minutes=settings.RESET_TOKEN_EXPIRY_MINUTES)
     
     # Delete any existing tokens for this email
     db.query(PasswordResetToken).filter(
@@ -199,7 +199,7 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
         return {"message": "Invalid or expired reset token"}
     
     # Check expiry
-    if datetime.utcnow() > token_record.expires_at:
+    if datetime.now(timezone.utc) > token_record.expires_at:
         db.delete(token_record)
         db.commit()
         return {"message": "Reset token has expired"}

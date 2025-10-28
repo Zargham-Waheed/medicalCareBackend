@@ -1,7 +1,7 @@
 import smtplib
 import random
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import bcrypt
@@ -41,7 +41,7 @@ def generate_reset_token() -> str:
 
 def create_jwt_token(user_id: int, email: str) -> str:
     """Create a JWT access token"""
-    expiry = datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
+    expiry = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     payload = {
         "user_id": user_id,
         "email": email,
