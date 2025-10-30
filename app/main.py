@@ -26,16 +26,6 @@ app.add_middleware(
 # Include auth routes under /auth
 app.include_router(auth_routes.router, prefix="/auth", tags=["Auth"])
 
-@app.on_event("startup")
-def on_startup() -> None:
-    # Initialize tables on startup, but don't crash service if DB is unavailable
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception as exc:
-        # Log and continue so health checks still pass
-        print(f"Startup DB init skipped: {exc}")
-
-
 @app.get("/healthz")
 def health_check():
     return {"status": "ok"}
@@ -44,6 +34,16 @@ def health_check():
 @app.get("/")
 def root():
     return {"message": "API running successfully"}
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    # Initialize tables on startup, but don't crash service if DB is unavailable
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:
+        # Log and continue so health checks still pass
+        print(f"Startup DB init skipped: {exc}")
 
 
 if __name__ == "__main__":
