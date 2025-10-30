@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables (will be set in Cloud Run)
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+app.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Documentation
+*.md
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# CI/CD
+.github/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+

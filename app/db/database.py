@@ -1,23 +1,30 @@
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from app.core.config import settings
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Create PostgreSQL engine
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_pre_ping=True,  # Verify connections before use
-    pool_recycle=300,    # Recycle connections every 5 minutes
+DB_NAME = os.getenv("DB_NAME", "app_db")
+DB_USER = os.getenv("DB_USER", "api_user")
+DB_PASS = os.getenv("DB_PASS")  # we will inject this at deploy time
+INSTANCE_CONN_NAME = os.getenv("INSTANCE_CONN_NAME")  # vpsproject-476606:us-central1:db-vps-prod-001
+DB_SOCKET_DIR = "/cloudsql"
+
+DATABASE_URL = (
+    f"postgresql+psycopg://{DB_USER}:{DB_PASS}@/{DB_NAME}"
+    f"?host={DB_SOCKET_DIR}/{INSTANCE_CONN_NAME}"
 )
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=2,
+)
 
-# Base class for models
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Dependency for getting DB session
 def get_db():
+    """FastAPI dependency for getting a DB session."""
     db = SessionLocal()
     try:
         yield db
