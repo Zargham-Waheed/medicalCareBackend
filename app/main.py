@@ -28,8 +28,12 @@ app.include_router(auth_routes.router, prefix="/auth", tags=["Auth"])
 
 @app.on_event("startup")
 def on_startup() -> None:
-    # Initialize tables on startup
-    Base.metadata.create_all(bind=engine)
+    # Initialize tables on startup, but don't crash service if DB is unavailable
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:
+        # Log and continue so health checks still pass
+        print(f"Startup DB init skipped: {exc}")
 
 
 @app.get("/healthz")
