@@ -6,7 +6,7 @@ from app.auth.models import User, OTPVerification, PasswordResetToken
 from app.auth.schemas import (
     SignupRequest, VerifyOTPRequest, LoginRequest, 
     ForgotPasswordRequest, ResetPasswordRequest,
-    TokenResponse, MessageResponse, SignupResponse, UserProfile
+    TokenResponse, MessageResponse, SignupResponse, UserProfile, UpdateProfileRequest
 )
 from app.auth.utils import (
     hash_password, verify_password, generate_otp, generate_reset_token,
@@ -93,10 +93,7 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     # Verify user
     user = db.query(User).filter(User.email == request.email).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        return {"message": "User not found"}
     
     user.is_verified = True
     db.delete(otp_record)
@@ -107,31 +104,22 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     
     return {"access_token": token, "token_type": "bearer", "username": user.email, "full_name": user.full_name}
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Login user and return JWT token"""
     
     # Find user
     user = db.query(User).filter(User.email == request.email).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
-        )
+        return {"message": "Invalid credentials"}
     
     # Check if verified
     if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email not verified. Please verify your email first."
-        )
+        return {"message": "Email not verified. Please verify your email first."}
     
     # Verify password
     if not verify_password(request.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
-        )
+        return {"message": "Invalid credentials"}
     
     # Generate JWT token
     token = create_jwt_token(user.id, user.email)
@@ -207,10 +195,7 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     # Find user
     user = db.query(User).filter(User.email == token_record.email).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        return {"message": "User not found"}
     
     # Update password
     user.password_hash = hash_password(request.new_password)
@@ -219,11 +204,8 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     
     return {"message": "Password reset successfully. Please log in again."}
 
-@router.get("/user/profile", response_model=UserProfile)
-def get_profile(authorization: str = Header(...), db: Session = Depends(get_db)):
-    """Get current user profile (protected route)"""
-    
-    # Extract token from Authorization header
+def get_user_from_token(authorization: str, db: Session):
+    """Helper function to extract and validate user from JWT token"""
     if not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -231,17 +213,38 @@ def get_profile(authorization: str = Header(...), db: Session = Depends(get_db))
         )
     
     token = authorization.split(" ")[1]
-    
-    # Decode token
     payload = decode_jwt_token(token)
     user_id = payload.get("user_id")
     
-    # Get user from database
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
+    
+    return user
+
+@router.get("/user/profile", response_model=UserProfile)
+def get_profile(authorization: str = Header(...), db: Session = Depends(get_db)):
+    """Get current user profile (protected route)"""
+    user = get_user_from_token(authorization, db)
+    return user
+
+@router.patch("/user/profile", response_model=UserProfile)
+def update_profile(
+    request: UpdateProfileRequest, 
+    authorization: str = Header(...), 
+    db: Session = Depends(get_db)
+):
+    """Update current user profile (protected route)"""
+    user = get_user_from_token(authorization, db)
+    
+    # Update fields if provided
+    if request.full_name is not None:
+        user.full_name = request.full_name
+    
+    db.commit()
+    db.refresh(user)
     
     return user

@@ -11,13 +11,20 @@ app = FastAPI(
 )
 
 # CORS to allow external frontend(s)
-allowed_origins = [
-    os.getenv("FRONTEND_URL", "*"),
-    os.getenv("FRONTEND_URL_8081", "*"),
-]
+# Support multiple frontend URLs from environment
+frontend_urls = []
+if os.getenv("FRONTEND_URL"):
+    frontend_urls.append(os.getenv("FRONTEND_URL"))
+if os.getenv("FRONTEND_URL_8081"):
+    frontend_urls.append(os.getenv("FRONTEND_URL_8081"))
+
+# Default to allow localhost for development if no env vars set
+if not frontend_urls:
+    frontend_urls = ["http://localhost:8080", "http://localhost:8000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=frontend_urls,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

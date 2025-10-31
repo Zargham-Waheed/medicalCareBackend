@@ -41,6 +41,9 @@ class TokenResponse(BaseModel):
     username: str  # email address
     full_name: str
 
+class ErrorResponse(BaseModel):
+    message: str
+
 class MessageResponse(BaseModel):
     message: str
 
@@ -57,3 +60,6 @@ class UserProfile(BaseModel):
     
     class Config:
         from_attributes = True
+
+class UpdateProfileRequest(BaseModel):
+    full_name: str = Field(None, min_length=2, max_length=100)

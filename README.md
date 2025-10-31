@@ -1,5 +1,5 @@
 MedicalCare Backend - Authentication API
-A complete, production-ready authentication backend built with FastAPI, SQLite, JWT, and email verification (OTP) for the MedicalCare application.
+A complete, production-ready authentication backend built with FastAPI, PostgreSQL, JWT, and email verification (OTP) for the MedicalCare application.
 
 Features
 ✅ User Signup with Email OTP Verification
@@ -8,17 +8,31 @@ Features
 ✅ Password Reset with Token Validation
 ✅ Protected Routes (JWT Required)
 ✅ CORS Enabled for Frontend Integration
-✅ SQLite Database with SQLAlchemy ORM
+✅ PostgreSQL Database with SQLAlchemy ORM (local, Cloud SQL, or proxy)
 ✅ Bcrypt Password Hashing
 ✅ Input Validation with Pydantic
+✅ Multi-Environment Support (Local, Cloud Run, VPS Proxy)
+
+Deployment Options
+🚀 Local Development - Run with local PostgreSQL
+☁️ Cloud Run - Fully managed on Google Cloud
+🖥️ VPS Proxy - Deploy on your VPS with Cloud SQL
+
+Quick Start
+See `QUICK_START.md` for quick deployment commands.
+
+Full Documentation
+See `DEPLOYMENT_GUIDE.md` for complete setup instructions for all environments.
+
 Project Structure
 medicalCareBackend/
 ├── app/
+│ ├── **init**.py
 │ ├── main.py # FastAPI application entry point
 │ ├── core/
 │ │ └── config.py # Configuration and environment variables
 │ ├── db/
-│ │ └── database.py # Database setup and session management
+│ │ └── database.py # Database setup with multi-env support
 │ └── auth/
 │ ├── models.py # SQLAlchemy database models
 │ ├── schemas.py # Pydantic request/response schemas
@@ -26,7 +40,9 @@ medicalCareBackend/
 │ └── utils.py # Helper functions (JWT, email, hashing)
 ├── requirements.txt # Python dependencies
 ├── .env # Environment variables (create from .env.example)
-├── .env.example # Environment variables template
+├── Dockerfile # Container configuration for Cloud Run
+├── QUICK_START.md # Quick reference for deployment
+├── DEPLOYMENT_GUIDE.md # Complete deployment documentation
 └── README.md # This file
 Installation
 
