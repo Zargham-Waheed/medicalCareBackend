@@ -108,23 +108,33 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Login user and return JWT token"""
     
-    # Find user
-    user = db.query(User).filter(User.email == request.email).first()
-    if not user:
-        return {"message": "Invalid credentials"}
-    
-    # Check if verified
-    if not user.is_verified:
-        return {"message": "Email not verified. Please verify your email first."}
-    
-    # Verify password
-    if not verify_password(request.password, user.password_hash):
-        return {"message": "Invalid credentials"}
-    
-    # Generate JWT token
-    token = create_jwt_token(user.id, user.email)
-    
-    return {"access_token": token, "token_type": "bearer", "username": user.email, "full_name": user.full_name}
+    try:
+        # Find user
+        user = db.query(User).filter(User.email == request.email).first()
+        if not user:
+            return {"message": "Invalid credentials"}
+        
+        # Check if verified
+        if not user.is_verified:
+            return {"message": "Email not verified. Please verify your email first."}
+        
+        # Verify password
+        if not verify_password(request.password, user.password_hash):
+            return {"message": "Invalid credentials"}
+        
+        # Generate JWT token
+        token = create_jwt_token(user.id, user.email)
+        
+        return {"access_token": token, "token_type": "bearer", "username": user.email, "full_name": user.full_name}
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Login error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Return error message in development, generic message in production
+        if settings.DEBUG:
+            return {"message": f"Internal server error: {str(e)}"}
+        return {"message": "Internal server error. Please try again later."}
 
 @router.post("/forgot-password", response_model=MessageResponse)
 def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):

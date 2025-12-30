@@ -7,7 +7,13 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 ENV = os.getenv("ENVIRONMENT", "local")  # local, cloud_run, or proxy
 
 DB_NAME = os.getenv("DB_NAME", "app_db")
-DB_USER = os.getenv("DB_USER", "app_user")
+# For local development on macOS Homebrew, default to current system user
+# For cloud/proxy, use app_user
+if ENV == "local":
+    import getpass
+    DB_USER = os.getenv("DB_USER", getpass.getuser())
+else:
+    DB_USER = os.getenv("DB_USER", "app_user")
 DB_PASS = os.getenv("DB_PASS", "")
 
 if ENV == "cloud_run":
